@@ -3,8 +3,11 @@
 Easy to run thanks to [[https://docs.haskellstack.org/en/stable/GUIDE/#script-interpreter][Stack script interpreter]], just do as-follows:
 
 #+BEGIN_SRC bash
-user@host:~$ ./1a.hs # e.g. for day 1, problem A
+user@host:~$ cat 1.txt | ./1a.hs # e.g. for day 1, problem A
 #+END_SRC
+
+You can also build binaries for all the solutions.
+Just run `make`.
 
 ** License (BSD3)
 
