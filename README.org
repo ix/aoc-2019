@@ -1,0 +1,11 @@
+* Advent of Code 2019
+
+Easy to run thanks to [[https://docs.haskellstack.org/en/stable/GUIDE/#script-interpreter][Stack script interpreter]], just do as-follows:
+
+#+BEGIN_SRC bash
+user@host:~$ ./1a.hs # e.g. for day 1, problem A
+#+END_SRC
+
+** License (BSD3)
+
+All files can be considered BSD3, but I don't know why you'd want them.
