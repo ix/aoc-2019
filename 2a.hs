@@ -3,7 +3,6 @@
    --package vector
    --package bytestring
    --package deepseq
-   --package transformers
 -}
 
 {-# LANGUAGE DeriveGeneric   #-}
@@ -13,7 +12,6 @@
 module Main where
 
 import Control.DeepSeq                    (NFData)
-import Control.Monad.Trans.Except
 import Data.ByteString.Char8              (ByteString)
 import qualified Data.ByteString.Char8    as BS
 import Data.Maybe                         (catMaybes, fromMaybe)
@@ -52,21 +50,21 @@ atOffset xs ix =
 xs !? n = fromMaybe 0 $ xs V.!? n
 
 -- | Update a vector by performing an Opcode on it.
-perform :: Opcode -> RAM -> Except Error RAM
+perform :: Opcode -> RAM -> Either Error RAM
 perform (Add x y dest) ram = pure $ ram V.// [(dest, x' + y')]
   where (x', y') = (ram !? x, ram !? y)
 perform (Mul x y dest) ram = pure $ ram V.// [(dest, x' * y')]
   where (x', y') = (ram !? x, ram !? y)
-perform Halt ram = throwE $ Halted ram
+perform Halt ram = Left $ Halted ram
 
 -- | Construct a vector of integers from a list of bytestrings.
 -- It's optimistic - if the parse fails for an element, the value is omitted.
 parseProgram :: [ByteString] -> RAM
 parseProgram = V.fromList . catMaybes . map (fmap fst . BS.readInt)
 
--- | Run a given program in the Except monad, returning either
+-- | Run a given program in the Either monad, returning either
 -- the (Right) end state, or the (Left) error state.
-run :: RAM -> Except Error RAM
+run :: RAM -> Either Error RAM
 run ram = V.foldM' eval ram offsets
   where offsets = V.fromList [n | n <- [0..V.length ram], n `mod` 4 == 0]
         eval akku offset =
@@ -75,13 +73,13 @@ run ram = V.foldM' eval ram offsets
             Nothing     -> pure akku
 
 -- | Convenience function to run with "arguments".
-runWithArgs :: Addr -> Addr -> RAM -> Except Error RAM
+runWithArgs :: Addr -> Addr -> RAM -> Either Error RAM
 runWithArgs n m ram = run $ ram V.// [(1, n), (2, m)]
   
 main :: IO ()
 main = do
   input <- BS.getContents
   let program = parseProgram $ BS.split ',' input
-  case runExcept $ runWithArgs 12 2 program of
+  case runWithArgs 12 2 program of
     Right state         -> putStrLn $ "FINISHED " ++ show state
     Left (Halted state) -> putStrLn $ "HALTED " ++ show state    
