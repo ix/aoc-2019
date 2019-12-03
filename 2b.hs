@@ -3,6 +3,7 @@
    --package vector
    --package bytestring
    --package deepseq
+   --package transformers
 -}
 
 {-# LANGUAGE DeriveGeneric   #-}
@@ -12,15 +13,20 @@
 module Main where
 
 import Control.DeepSeq                    (NFData)
+import Control.Monad.Trans.Except
 import Data.ByteString.Char8              (ByteString)
-import Data.Vector                        (Vector)
-import GHC.Generics                       (Generic)
-import Data.Maybe                         (catMaybes, fromMaybe)
 import qualified Data.ByteString.Char8    as BS
+import Data.Maybe                         (catMaybes, fromMaybe)
+import Data.Vector                        (Vector)
 import qualified Data.Vector              as V
+import GHC.Generics                       (Generic)
+import Control.Monad (when)
 
 type Addr = Int
 type RAM  = Vector Addr
+
+data Error = Halted RAM
+  deriving (Generic, NFData, Show)
 
 data Opcode = Add  Addr Addr Addr
             | Mul  Addr Addr Addr
@@ -47,27 +53,30 @@ atOffset xs ix =
 xs !? n = fromMaybe 0 $ xs V.!? n
 
 -- | Update a vector by performing an Opcode on it.
-perform :: Opcode -> RAM -> RAM
-perform (Add x y dest) ram = ram V.// [(dest, x' + y')]
+perform :: Opcode -> RAM -> Except Error RAM
+perform (Add x y dest) ram = pure $ ram V.// [(dest, x' + y')]
   where (x', y') = (ram !? x, ram !? y)
-perform (Mul x y dest) ram = ram V.// [(dest, x' * y')]
+perform (Mul x y dest) ram = pure $ ram V.// [(dest, x' * y')]
   where (x', y') = (ram !? x, ram !? y)
-perform Halt ram = ram -- error ("HALTED AT STATE: " ++ show ram)
+perform Halt ram = throwE $ Halted ram
 
 -- | Construct a vector of integers from a list of bytestrings.
 -- It's optimistic - if the parse fails for an element, the value is omitted.
 parseProgram :: [ByteString] -> RAM
 parseProgram = V.fromList . catMaybes . map (fmap fst . BS.readInt)
 
-run :: RAM -> RAM
-run ram = V.foldl' eval ram offsets
+-- | Run a given program in the Except monad, returning either
+-- the (Right) end state, or the (Left) error state.
+run :: RAM -> Except Error RAM
+run ram = V.foldM' eval ram offsets
   where offsets = V.fromList [n | n <- [0..V.length ram], n `mod` 4 == 0]
         eval akku offset =
           case akku `atOffset` offset of
             Just opcode -> perform opcode akku
-            Nothing     -> akku
+            Nothing     -> pure akku
 
-runWithArgs :: Addr -> Addr -> RAM -> RAM
+-- | Convenience function to run with "arguments".
+runWithArgs :: Addr -> Addr -> RAM -> Except Error RAM
 runWithArgs n m ram = run $ ram V.// [(1, n), (2, m)]
   
 main :: IO ()
@@ -76,8 +85,8 @@ main = do
   let program = parseProgram $ BS.split ',' input
   V.forM_ [0..99] $ \n ->
     V.forM_ [0..99] $ \v -> do
-      let result = runWithArgs n v program
-      if V.head result == 19690720 then
+      let result = case runExcept $ runWithArgs n v program of
+                     Right result -> result
+                     Left (Halted result) -> result
+      when (V.head result == 19690720) $
         print (n * 100 + v)
-      else return ()
-  
