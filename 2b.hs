@@ -12,13 +12,12 @@
 module Main where
 
 import Control.DeepSeq                    (NFData)
-import Control.Monad.Except
 import Data.ByteString.Char8              (ByteString)
-import qualified Data.ByteString.Char8    as BS
-import Data.Maybe                         (catMaybes, fromMaybe)
 import Data.Vector                        (Vector)
-import qualified Data.Vector              as V
 import GHC.Generics                       (Generic)
+import Data.Maybe                         (catMaybes, fromMaybe)
+import qualified Data.ByteString.Char8    as BS
+import qualified Data.Vector              as V
 
 type Addr = Int
 type RAM  = Vector Addr
@@ -53,7 +52,7 @@ perform (Add x y dest) ram = ram V.// [(dest, x' + y')]
   where (x', y') = (ram !? x, ram !? y)
 perform (Mul x y dest) ram = ram V.// [(dest, x' * y')]
   where (x', y') = (ram !? x, ram !? y)
-perform Halt ram = error ("HALTED AT STATE: " ++ show ram) -- shouldn't be partial but w/e
+perform Halt ram = ram -- error ("HALTED AT STATE: " ++ show ram)
 
 -- | Construct a vector of integers from a list of bytestrings.
 -- It's optimistic - if the parse fails for an element, the value is omitted.
@@ -75,4 +74,10 @@ main :: IO ()
 main = do
   input <- BS.getContents
   let program = parseProgram $ BS.split ',' input
-  print $ runWithArgs 12 2 program
+  V.forM_ [0..99] $ \n ->
+    V.forM_ [0..99] $ \v -> do
+      let result = runWithArgs n v program
+      if V.head result == 19690720 then
+        print (n * 100 + v)
+      else return ()
+  
