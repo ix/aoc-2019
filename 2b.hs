@@ -83,8 +83,6 @@ main = do
   let program = parseProgram $ BS.split ',' input
   V.forM_ [0..99] $ \n ->
     V.forM_ [0..99] $ \v -> do
-      let result = case runWithArgs n v program of
-                     Right result -> result
-                     Left (Halted result) -> result
+      let result = either (\(Halted r) -> r) id $ runWithArgs n v program
       when (V.head result == 19690720) $
         print (n * 100 + v)
