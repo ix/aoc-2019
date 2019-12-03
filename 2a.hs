@@ -52,7 +52,7 @@ perform (Add x y dest) ram = ram V.// [(dest, x' + y')]
   where (x', y') = (ram !? x, ram !? y)
 perform (Mul x y dest) ram = ram V.// [(dest, x' * y')]
   where (x', y') = (ram !? x, ram !? y)
-perform Halt ram = error ("HALTED AT STATE: " ++ show ram)
+perform Halt ram = error ("HALTED AT STATE: " ++ show ram) -- shouldn't be partial but w/e
 
 -- | Construct a vector of integers from a list of bytestrings.
 -- It's optimistic - if the parse fails for an element, the value is omitted.
@@ -66,10 +66,12 @@ run ram = V.foldl' eval ram offsets
           case akku `atOffset` offset of
             Just opcode -> perform opcode akku
             Nothing     -> akku
+
+runWithArgs :: Addr -> Addr -> RAM -> RAM
+runWithArgs n m ram = run $ ram V.// [(1, n), (2, m)]
   
 main :: IO ()
 main = do
   input <- BS.getContents
   let program = parseProgram $ BS.split ',' input
-  print $ run $ program -- V.// [(1, 12), (2, 2)]
-  
+  print $ runWithArgs 12 2 program
