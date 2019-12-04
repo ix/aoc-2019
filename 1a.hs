@@ -10,4 +10,4 @@ main = do
 
 -- `div` rounds down
 fuel :: Integer -> Integer
-fuel = (subtract 2) . (`div` 3)
+fuel = subtract 2 . (`div` 3)

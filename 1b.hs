@@ -9,11 +9,11 @@ main = do
   print $ sum $ map (recfuel . read) $ lines input
   
 recfuel :: Integer -> Integer
-recfuel n = go n 0
+recfuel m = go m 0
   where go n total
           | fuel n <= 0 = total
           | otherwise   = let n' = fuel n in go n' (total + n')
 
 -- `div` rounds down
 fuel :: Integer -> Integer
-fuel = (subtract 2) . (`div` 3)
+fuel = subtract 2 . (`div` 3)

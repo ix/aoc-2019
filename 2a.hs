@@ -14,7 +14,7 @@ module Main where
 import Control.DeepSeq                    (NFData)
 import Data.ByteString.Char8              (ByteString)
 import qualified Data.ByteString.Char8    as BS
-import Data.Maybe                         (catMaybes, fromMaybe)
+import Data.Maybe                         (mapMaybe, fromMaybe)
 import Data.Vector                        (Vector)
 import qualified Data.Vector              as V
 import GHC.Generics                       (Generic)
@@ -22,7 +22,7 @@ import GHC.Generics                       (Generic)
 type Addr = Int
 type RAM  = Vector Addr
 
-data Error = Halted RAM
+newtype Error = Halted RAM
   deriving (Generic, NFData, Show)
 
 data Opcode = Add  Addr Addr Addr
@@ -36,7 +36,7 @@ listToOpcode :: RAM -> Maybe Opcode
 listToOpcode [1, src1, src2, dest] = Just $ Add src1 src2 dest
 listToOpcode [2, src1, src2, dest] = Just $ Mul src1 src2 dest
 listToOpcode [99, _, _, _]         = Just Halt
-listToOpcode xs                    = Nothing
+listToOpcode _                     = Nothing
 
 -- | Given a vector of integers and an address
 -- return the Opcode if a valid one exists at that point.
@@ -60,7 +60,7 @@ perform Halt ram = Left $ Halted ram
 -- | Construct a vector of integers from a list of bytestrings.
 -- It's optimistic - if the parse fails for an element, the value is omitted.
 parseProgram :: [ByteString] -> RAM
-parseProgram = V.fromList . catMaybes . map (fmap fst . BS.readInt)
+parseProgram = V.fromList . mapMaybe (fmap fst . BS.readInt)
 
 -- | Run a given program in the Either monad, returning either
 -- the (Right) end state, or the (Left) error state.
