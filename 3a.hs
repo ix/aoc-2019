@@ -55,16 +55,11 @@ move (x, y) (D n) = (x, y + n)
 move (x, y) (R n) = (x + n, y)
 move (x, y) (L n) = (x - n, y)
 
--- | Run a Wire and return its final location.
-runWire :: Wire -> Point
-runWire = foldl move (0, 0)
-
-intersections :: (Point, Point) -> (Point, Point) -> HashSet Point
-intersections (s, e) (s', e') = HS.intersection lineA lineB
-  where 
-    lineA = HS.fromList [(x', y') | x' <- fst s `to` fst e, y' <- snd s `to` snd e]
-    lineB = HS.fromList [(x', y') | x' <- fst s' `to` fst e', y' <- snd s' `to` snd e']
-    a `to` b = if b > a then [a..b] else reverse [b..a]
+-- | Run a Wire and return its visited locations.
+runWire :: Wire -> HashSet Point
+runWire = snd . foldl update ((0, 0), HS.empty)
+  where update (p, s) m = (move p m, HS.insert (p `to` move p m) s)
+        to old new = 
 
 processInput :: ByteString -> [Wire]
 processInput = map (mapMaybe parseMovement . BS.split ',') . BS.lines
